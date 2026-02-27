@@ -16,11 +16,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Tesseract
-        run: sudo apt-get install -y tesseract-ocr
-
       - name: Install dependencies
-        run: pip install -e ".[dev,ocr]"
+        run: pip install -e ".[dev]"
 
       - name: Run tests
         run: pytest tests/ -v

@@ -23,9 +23,8 @@ def _default_worker_count() -> int:
 
 @dataclass(frozen=True, slots=True)
 class OrientationConfig:
-    secondary_confidence_threshold: float = 2.0
+    flip_confidence_threshold: float = 0.50
     output_quality: int = 92
-    secondary_max_dimension: int = 1200
     primary_max_dimension: int = 800
     workers: int | None = None
     resume_enabled: bool = True

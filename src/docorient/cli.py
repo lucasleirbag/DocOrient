@@ -7,7 +7,7 @@ from pathlib import Path
 from docorient._version import __version__
 from docorient.batch.processor import process_directory
 from docorient.config import OrientationConfig
-from docorient.detection.secondary import is_secondary_engine_available
+from docorient.detection.flip_classifier import is_flip_classifier_available
 
 
 def _build_argument_parser() -> argparse.ArgumentParser:
@@ -46,18 +46,6 @@ def _build_argument_parser() -> argparse.ArgumentParser:
         help="Output JPEG quality (1-100). Default: 92.",
     )
     parser.add_argument(
-        "--confidence",
-        type=float,
-        default=2.0,
-        help="Secondary engine confidence threshold. Default: 2.0.",
-    )
-    parser.add_argument(
-        "--no-secondary",
-        action="store_true",
-        default=False,
-        help="Disable secondary engine (primary engine only).",
-    )
-    parser.add_argument(
         "--no-resume",
         action="store_true",
         default=False,
@@ -91,16 +79,18 @@ def _print_dry_run_info(input_path: Path, config: OrientationConfig, limit: int)
     total_files = len(pages_by_source)
     total_pages = sum(len(pages) for pages in pages_by_source.values())
 
+    flip_status = "available" if is_flip_classifier_available() else "unavailable"
+
     print(f"\n{'=' * 60}")
     print("  DRY RUN - No changes will be made")
     print(f"{'=' * 60}")
-    print(f"  Input:            {input_path}")
-    print(f"  Files:            {total_files} source documents")
-    print(f"  Pages:            {total_pages} images")
-    print(f"  Workers:          {config.effective_workers}")
-    print(f"  Secondary engine: {'enabled' if is_secondary_engine_available() else 'disabled'}")
-    print(f"  Quality:          {config.output_quality}")
-    print(f"  Resume:           {'enabled' if config.resume_enabled else 'disabled'}")
+    print(f"  Input:             {input_path}")
+    print(f"  Files:             {total_files} source documents")
+    print(f"  Pages:             {total_pages} images")
+    print(f"  Workers:           {config.effective_workers}")
+    print(f"  Flip classifier:   {flip_status}")
+    print(f"  Quality:           {config.output_quality}")
+    print(f"  Resume:            {'enabled' if config.resume_enabled else 'disabled'}")
     print(f"{'=' * 60}\n")
 
 
@@ -138,10 +128,7 @@ def main() -> None:
         print(f"Error: '{arguments.input_dir}' is not a valid directory.", file=sys.stderr)
         sys.exit(1)
 
-    secondary_threshold = arguments.confidence if not arguments.no_secondary else float("inf")
-
     config = OrientationConfig(
-        secondary_confidence_threshold=secondary_threshold,
         output_quality=arguments.quality,
         workers=arguments.workers,
         resume_enabled=not arguments.no_resume,
@@ -151,14 +138,16 @@ def main() -> None:
         _print_dry_run_info(input_path, config, arguments.limit)
         return
 
+    flip_status = "available" if is_flip_classifier_available() else "unavailable"
+
     print(f"\n{'=' * 60}")
     print(f"  docorient v{__version__}")
     print(f"{'=' * 60}")
-    print(f"  Input:            {input_path}")
-    print(f"  Output:           {arguments.output_dir or 'auto (UUID)'}")
-    print(f"  Workers:          {config.effective_workers}")
-    print(f"  Secondary engine: {'disabled' if arguments.no_secondary else 'enabled'}")
-    print(f"  Quality:          {config.output_quality}")
+    print(f"  Input:             {input_path}")
+    print(f"  Output:            {arguments.output_dir or 'auto (UUID)'}")
+    print(f"  Workers:           {config.effective_workers}")
+    print(f"  Flip classifier:   {flip_status}")
+    print(f"  Quality:           {config.output_quality}")
     print(f"{'=' * 60}\n")
 
     summary = process_directory(

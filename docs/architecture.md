@@ -18,8 +18,10 @@ src/docorient/
 │   ├── __init__.py          Re-exports detection API
 │   ├── base.py              DetectionEngine Protocol
 │   ├── engine.py            DetectionPipeline orchestrator
-│   ├── primary.py           PrimaryEngine (90°/270°)
-│   └── secondary.py         SecondaryEngine (180°)
+│   ├── primary.py           PrimaryEngine (axis detection)
+│   └── flip_classifier.py   FlipClassifierEngine (180° CNN)
+├── models/
+│   └── orientation_detector.onnx   MobileNetV2 ONNX model (~8.5 MB)
 └── batch/
     ├── __init__.py          Re-exports process_directory
     ├── scanner.py           Directory scanning and grouping
@@ -34,34 +36,27 @@ detect_orientation()
         │
         ▼
 DetectionPipeline.run()
-Iterates through list[DetectionEngine]
+Iterates through [PrimaryEngine, FlipClassifierEngine]
         │
         ▼
 PrimaryEngine.detect()
-Analyzes pixel density distribution to determine text alignment.
+Analyzes pixel energy distribution to classify axis:
+  - Horizontal text (0° or 180°)
+  - Vertical text (90° or 270°)
         │
-        ├── angle ∈ {90, 270} ──► Return result immediately
+        ▼
+FlipClassifierEngine via _resolve_flip()
         │
-        └── angle = 0 (aligned) ──► SecondaryEngine.detect()
-                                            │
-                                  is_available()?
-                                            │
-                               Yes ─────────┴───────── No
-                                ▼                       ▼
-                     Runs secondary analysis    Return 0° (no change)
-                     Checks for 180° inversion
-                     with confidence scoring
-                                │
-                  confidence >= threshold?
-                                │
-                    Yes ────────┴──────── No
-                     ▼                    ▼
-              Return 180°           Return 0°
+        ├── If horizontal → CNN classifies directly
+        │   ├── Upright → return 0°
+        │   └── Upside-down → return 180°
+        │
+        └── If vertical → normalize by rotating 90° CCW, then CNN classifies
+            ├── Upright (was at 90°) → return 90°
+            └── Upside-down (was at 270°) → return 270°
 ```
 
 ## Engine Architecture
-
-The detection system is built on a `DetectionEngine` Protocol:
 
 ```
 DetectionEngine (Protocol)
@@ -70,16 +65,56 @@ DetectionEngine (Protocol)
 
 PrimaryEngine implements DetectionEngine
 ├── Always returns OrientationResult (never None)
-└── Detects 0°, 90°, 270° via energy analysis
+├── Computes horizontal/vertical energy via pixel projection
+└── Classifies text axis with ~97% accuracy
 
-SecondaryEngine implements DetectionEngine
-├── Returns None when unavailable or low confidence
-└── Detects 180° via optional OCR dependency
+FlipClassifierEngine implements DetectionEngine
+├── Returns None when confidence below threshold
+├── Uses embedded MobileNetV2 ONNX model
+├── Binary classification: upright vs upside-down
+├── Inference via ONNX Runtime (~5ms on CPU)
+├── Trained on 3,000+ diverse documents (96.8% accuracy)
+└── Model input: 224×224 RGB, ImageNet-normalized
 
 DetectionPipeline
-├── Holds list[DetectionEngine] (default: [PrimaryEngine(), SecondaryEngine()])
-└── Executes engines in sequence with short-circuit logic
+├── Holds list[DetectionEngine] (default: [PrimaryEngine(), FlipClassifierEngine()])
+├── PrimaryEngine detects axis
+└── FlipClassifier resolves flip direction within the detected axis
 ```
+
+## FlipClassifier Details
+
+The FlipClassifierEngine wraps a MobileNetV2 fine-tuned for binary classification:
+
+- **Task**: Classify if a document image is upside-down (180° rotated)
+- **Architecture**: MobileNetV2 with custom binary classifier head
+- **Input**: 224×224 RGB image, center-cropped from 256×256 resize
+- **Normalization**: ImageNet mean/std
+- **Output**: Single logit → sigmoid → P(upside_down)
+- **Export format**: ONNX (opset 13)
+- **Model size**: ~8.5 MB
+- **Inference**: ~5ms per image on CPU via ONNX Runtime
+- **Standalone accuracy**: 96.8% (validation set)
+- **Pipeline accuracy**: 98% across all 4 orientations (0°, 90°, 180°, 270°)
+
+### Training Data
+
+The model was trained on 3,049 document images from 5 diverse public datasets:
+
+| Dataset | Count | Type |
+|---|---|---|
+| FUNSD | 199 | Scanned forms |
+| Invoices & Receipts | 250 | Financial documents |
+| CORD-v2 | 900 | Point-of-sale receipts |
+| DocLayNet v1.1 | 1,000 | Varied document layouts |
+| DocumentVQA | 700 | Diverse document types |
+
+Each image generates 2 training samples (upright + 180° flipped), with 3x augmentation
+(random crop, color jitter, blur, grayscale, perspective, erasing). Total effective
+training samples: ~15,500.
+
+For vertical images (90°/270°), the pipeline first normalizes by rotating 90° CCW,
+then passes the horizontally-aligned image to the classifier.
 
 ## Batch Processing Pipeline
 

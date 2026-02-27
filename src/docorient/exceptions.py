@@ -12,7 +12,3 @@ class CorrectionError(DocorientError):
 
 class BatchProcessingError(DocorientError):
     pass
-
-
-class TesseractNotAvailableError(DocorientError):
-    pass

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docorient"
-version = "0.3.1"
+version = "0.3.2"
 description = "Document image orientation detection and correction."
 readme = "README.md"
 license = "MIT"
@@ -37,9 +37,10 @@ dev = ["pytest >= 8.0", "pytest-cov", "ruff >= 0.4", "build", "twine"]
 docorient = "docorient.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/cebraspe-lab/docorient"
-Repository = "https://github.com/cebraspe-lab/docorient"
-Issues = "https://github.com/cebraspe-lab/docorient/issues"
+Homepage = "https://github.com/lucasleirbag/DocOrient"
+Repository = "https://github.com/lucasleirbag/DocOrient"
+Issues = "https://github.com/lucasleirbag/DocOrient/issues"
+Changelog = "https://github.com/lucasleirbag/DocOrient/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/docorient"]

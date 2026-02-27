@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 (2026-02-27)
+
+- Fix: update project URLs to correct GitHub repository
+- Add changelog link to PyPI metadata
+
 ## 0.3.1 (2026-02-27)
 
 - Fix: author metadata corrected to Lucas Gabriel Vaz

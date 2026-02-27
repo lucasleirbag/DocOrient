@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 (2026-02-27)
+
+- Clean up all legacy references from documentation and CI
+- Update README description with pipeline accuracy metrics
+- Add retraining instructions to contributing guide
+
 ## 0.4.0 (2026-02-27)
 
 - **Breaking:** remove `SecondaryEngine`, `[ocr]` extra

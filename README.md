@@ -6,7 +6,9 @@
 
 Document image orientation detection and correction.
 
-Automatically detects and fixes rotation (0°, 90°, 180°, 270°) in scanned document images using a two-stage detection pipeline, with support for multi-page majority voting and parallel batch processing.
+Automatically detects and fixes rotation (0°, 90°, 180°, 270°) in scanned document images using a two-stage pipeline: energy-based axis detection + neural network flip classification. Achieves **98% accuracy** across all four orientations. Includes multi-page majority voting and parallel batch processing.
+
+No external binary dependencies — the neural model ships embedded in the package (~8.5 MB).
 
 ---
 
@@ -15,18 +17,6 @@ Automatically detects and fixes rotation (0°, 90°, 180°, 270°) in scanned do
 ```bash
 pip install docorient
 ```
-
-To enable full 180° detection:
-
-```bash
-pip install docorient[ocr]
-```
-
-> **Note:** The `[ocr]` extra requires [Tesseract](https://github.com/tesseract-ocr/tesseract) installed on your system.
->
-> - **macOS:** `brew install tesseract`
-> - **Ubuntu/Debian:** `sudo apt install tesseract-ocr`
-> - **Windows:** [installer](https://github.com/UB-Mannheim/tesseract/wiki)
 
 ---
 
@@ -98,10 +88,22 @@ if __name__ == "__main__":
 ```bash
 docorient ./scans --output ./fixed
 docorient ./scans --output ./fixed --workers 4 --quality 95
-docorient ./scans --no-secondary --limit 100
+docorient ./scans --limit 100
 docorient ./scans --dry-run
 docorient --version
 ```
+
+---
+
+## How It Works
+
+DocOrient uses a two-stage detection pipeline:
+
+1. **PrimaryEngine** — Analyzes horizontal and vertical energy distribution to determine if text is horizontal (0°/180°) or vertical (90°/270°). Fast, pure NumPy, ~97% accurate for axis detection.
+
+2. **FlipClassifierEngine** — A MobileNetV2-based neural network (exported as ONNX, ~8.5 MB) that classifies whether a document is upside-down (180°). Trained on 3,000+ diverse document images from 5 public datasets (forms, invoices, receipts, technical documents, varied layouts). Achieves 96.8% standalone accuracy. Runs via ONNX Runtime at ~5ms per image on CPU.
+
+The pipeline combines both: PrimaryEngine detects the axis, FlipClassifier resolves the ambiguity within each axis pair (0 vs 180, 90 vs 270). Combined pipeline accuracy: **98%** across all four orientations (~20ms per image).
 
 ---
 
@@ -111,13 +113,12 @@ docorient --version
 from docorient import OrientationConfig
 
 config = OrientationConfig(
-    secondary_confidence_threshold=2.0,  # Minimum confidence for secondary engine (default: 2.0)
-    output_quality=92,                   # JPEG output quality 1-100 (default: 92)
-    secondary_max_dimension=1200,        # Max image size for secondary engine (default: 1200)
-    primary_max_dimension=800,           # Max image size for primary engine (default: 800)
-    workers=4,                           # Parallel workers; None = cpu_count-2 (default: None)
-    resume_enabled=True,                 # Resume interrupted batch jobs (default: True)
-    supported_extensions=(               # File extensions to process
+    flip_confidence_threshold=0.50,  # CNN confidence threshold (default: 0.50)
+    output_quality=92,               # JPEG output quality 1-100 (default: 92)
+    primary_max_dimension=800,       # Max image size for primary engine (default: 800)
+    workers=4,                       # Parallel workers; None = cpu_count-2 (default: None)
+    resume_enabled=True,             # Resume interrupted batch jobs (default: True)
+    supported_extensions=(           # File extensions to process
         ".jpg", ".jpeg", ".png",
         ".tiff", ".tif", ".bmp",
         ".gif", ".webp",
@@ -129,7 +130,7 @@ config = OrientationConfig(
 
 ## API Reference
 
-### `detect_orientation(image, config=None) → OrientationResult`
+### `detect_orientation(image, config=None) -> OrientationResult`
 
 Detects the orientation of a document image without modifying it.
 
@@ -152,20 +153,20 @@ Detects the orientation of a document image without modifying it.
 
 Detects and corrects the orientation of a single image.
 
-- `return_metadata=False` → returns `PIL.Image.Image`
-- `return_metadata=True` → returns `CorrectionResult`
+- `return_metadata=False` -> returns `PIL.Image.Image`
+- `return_metadata=True` -> returns `CorrectionResult`
 
 **`CorrectionResult`** fields: `image: PIL.Image.Image`, `orientation: OrientationResult`
 
 ---
 
-### `correct_document_pages(pages, *, config=None) → list[CorrectionResult]`
+### `correct_document_pages(pages, *, config=None) -> list[CorrectionResult]`
 
 Corrects orientation for all pages of a multi-page document with majority voting.
 
 ---
 
-### `process_directory(input_dir, *, output_dir=None, config=None, limit=0, show_progress=True) → BatchSummary`
+### `process_directory(input_dir, *, output_dir=None, config=None, limit=0, show_progress=True) -> BatchSummary`
 
 Processes all images in a directory in parallel.
 
@@ -191,11 +192,11 @@ Processes all images in a directory in parallel.
 
 ```
 contrato_p1.jpg  ┐
-contrato_p2.jpg  ├─► grouped as "contrato" → majority voting applied
+contrato_p2.jpg  ├── grouped as "contrato" -> majority voting applied
 contrato_p3.jpg  ┘
 
 edital_p1.jpg    ┐
-edital_p2.jpg    ┘─► grouped as "edital"
+edital_p2.jpg    ┘── grouped as "edital"
 ```
 
 Files that don't match the pattern are treated as single-page documents.
@@ -224,7 +225,6 @@ from docorient import (
     DetectionError,
     CorrectionError,
     BatchProcessingError,
-    TesseractNotAvailableError,
 )
 ```
 
@@ -233,10 +233,10 @@ from docorient import (
 ## Development
 
 ```bash
-git clone https://github.com/lucasleirbag/docorient.git
-cd docorient
+git clone https://github.com/lucasleirbag/DocOrient.git
+cd DocOrient
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,ocr]"
+pip install -e ".[dev]"
 pytest tests/ -v
 ruff check src/ tests/
 ```

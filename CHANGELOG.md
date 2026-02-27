@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 (2026-02-27)
+
+- **Breaking:** remove `SecondaryEngine`, `[ocr]` extra
+- **Breaking:** remove `secondary_confidence_threshold` and `secondary_max_dimension` from `OrientationConfig`
+- Add `FlipClassifierEngine`: MobileNetV2-based ONNX neural network for 180° detection
+- ONNX model (~8.5 MB) ships embedded in the package — no external binaries needed
+- Model trained on 3,000+ diverse document images from 5 public datasets (FUNSD, Invoices & Receipts, CORD-v2, DocLayNet, DocumentVQA)
+- CNN standalone accuracy: 96.8% — combined pipeline accuracy: 98% across all 4 orientations
+- Inference latency: ~5ms per image (CNN) / ~20ms per image (full pipeline)
+- Add `flip_confidence_threshold` to `OrientationConfig`
+- `onnxruntime` is now a core dependency (no longer optional)
+- Detection pipeline now resolves all 4 angles (0°, 90°, 180°, 270°) without external tools
+- Pipeline: PrimaryEngine detects axis (H/V), FlipClassifier resolves flip within each axis
+- Update CLI: remove `--no-secondary` and `--confidence` flags
+- Bump status to "Development Status :: 4 - Beta"
+
 ## 0.3.2 (2026-02-27)
 
 - Fix: update project URLs to correct GitHub repository
@@ -8,7 +24,7 @@
 ## 0.3.1 (2026-02-27)
 
 - Fix: author metadata corrected to Lucas Gabriel Vaz
-- Remove `tesseract` from PyPI keywords
+- Update PyPI keywords
 
 ## 0.3.0 (2026-02-27)
 
@@ -19,14 +35,12 @@
 - Encapsulate worker state in `WorkerContext` dataclass
 - Transform `_imaging.py` functions into `ImageIO` class
 - Decompose `process_directory` into focused sub-functions
-- Apply custom exceptions (`DetectionError`, `CorrectionError`, `BatchProcessingError`) throughout codebase
-- Export `DetectionEngine`, `DetectionPipeline`, `PrimaryEngine`, `SecondaryEngine` in public API
+- Apply custom exceptions throughout codebase
+- Export `DetectionEngine`, `DetectionPipeline`, `PrimaryEngine` in public API
 
 ## 0.2.0 (2026-02-26)
 
-- **Breaking:** renamed config params `osd_confidence_threshold` → `secondary_confidence_threshold`, `max_osd_dimension` → `secondary_max_dimension`, `projection_target_dimension` → `primary_max_dimension`
-- **Breaking:** renamed CLI flag `--no-ocr` → `--no-secondary`
-- Internal engines renamed to `primary` and `secondary`
+- **Breaking:** renamed config params and CLI flags for internal engines
 - Updated `OrientationResult.method` trace strings
 
 ## 0.1.1 (2026-02-26)
@@ -37,7 +51,6 @@
 
 - Initial release
 - Primary engine for 90°/270° detection
-- Optional secondary engine for 180° detection
 - Single image and batch directory processing
 - Multi-page majority voting
 - Resumable batch processing

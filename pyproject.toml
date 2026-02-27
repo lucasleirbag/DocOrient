@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docorient"
+version = "0.3.1"
+description = "Document image orientation detection and correction."
+readme = "README.md"
+license = "MIT"
+requires-python = ">= 3.10"
+authors = [{ name = "Lucas Gabriel Vaz" }]
+keywords = ["document", "orientation", "rotation", "ocr", "image", "correction"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Typing :: Typed",
+]
+dependencies = [
+    "Pillow >= 10.0",
+    "numpy >= 1.24",
+    "tqdm >= 4.60",
+]
+
+[project.optional-dependencies]
+ocr = ["pytesseract >= 0.3.10"]
+dev = ["pytest >= 8.0", "pytest-cov", "ruff >= 0.4", "build", "twine"]
+
+[project.scripts]
+docorient = "docorient.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/cebraspe-lab/docorient"
+Repository = "https://github.com/cebraspe-lab/docorient"
+Issues = "https://github.com/cebraspe-lab/docorient/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docorient"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "SIM",
+    "RUF",
+]
+ignore = ["B905"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

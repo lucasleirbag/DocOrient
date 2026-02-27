@@ -31,8 +31,8 @@ class TestCLI:
             text=True,
             cwd=str(Path(__file__).parent.parent / "src"),
         )
-        assert "tesseract" not in result.stdout.lower()
         assert "projection" not in result.stdout.lower()
+        assert "mobilenet" not in result.stdout.lower()
 
     def test_invalid_directory(self, tmp_path):
         nonexistent = str(tmp_path / "nonexistent")

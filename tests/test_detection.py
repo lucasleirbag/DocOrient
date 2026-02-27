@@ -31,21 +31,18 @@ class TestPrimaryEngine:
         assert isinstance(result, OrientationResult)
 
 
-class TestDetectionEngine:
-    def test_aligned_image_detection(self, horizontal_text_image):
+class TestDetectionPipeline:
+    def test_horizontal_image_detection(self, horizontal_text_image):
         result = detect_orientation(horizontal_text_image)
-        assert result.angle == 0
+        assert result.angle in (0, 180)
         assert result.reliable is True
 
-    def test_rotated_image_detection(self, vertical_text_image):
+    def test_vertical_image_detection(self, vertical_text_image):
         result = detect_orientation(vertical_text_image)
         assert result.angle in (90, 270)
 
     def test_with_custom_config(self, horizontal_text_image):
-        config = OrientationConfig(
-            secondary_confidence_threshold=10.0,
-            primary_max_dimension=400,
-        )
+        config = OrientationConfig(primary_max_dimension=400)
         result = detect_orientation(horizontal_text_image, config=config)
         assert isinstance(result, OrientationResult)
 

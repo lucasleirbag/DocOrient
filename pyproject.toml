@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docorient"
-version = "0.3.2"
+version = "0.4.0"
 description = "Document image orientation detection and correction."
 readme = "README.md"
 license = "MIT"
 requires-python = ">= 3.10"
 authors = [{ name = "Lucas Gabriel Vaz" }]
-keywords = ["document", "orientation", "rotation", "ocr", "image", "correction"]
+keywords = ["document", "orientation", "rotation", "image", "correction", "onnx"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -27,10 +27,10 @@ dependencies = [
     "Pillow >= 10.0",
     "numpy >= 1.24",
     "tqdm >= 4.60",
+    "onnxruntime >= 1.16",
 ]
 
 [project.optional-dependencies]
-ocr = ["pytesseract >= 0.3.10"]
 dev = ["pytest >= 8.0", "pytest-cov", "ruff >= 0.4", "build", "twine"]
 
 [project.scripts]
@@ -42,8 +42,14 @@ Repository = "https://github.com/lucasleirbag/DocOrient"
 Issues = "https://github.com/lucasleirbag/DocOrient/issues"
 Changelog = "https://github.com/lucasleirbag/DocOrient/blob/main/CHANGELOG.md"
 
+[tool.hatch.build]
+exclude = ["/data", "/models", "/scripts"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/docorient"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/docorient/models/orientation_detector.onnx" = "docorient/models/orientation_detector.onnx"
 
 [tool.ruff]
 target-version = "py310"
